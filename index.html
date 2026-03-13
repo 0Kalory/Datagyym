@@ -252,8 +252,13 @@ const FMAP_FR = { tired:'Fatigué', ok:'Correct', good:'Bien', great:'Top' };
 function loadState() {
   try {
     const r = localStorage.getItem('fb_v2');
-    if (r) return JSON.parse(r);
-  } catch(e) {}
+    if (r) {
+      const parsed = JSON.parse(r);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch(e) {
+    localStorage.removeItem('fb_v2');
+  }
   return { session:{}, history:[], sessionStart:null };
 }
 function saveState() {
@@ -516,7 +521,7 @@ function renderHistory() {
       '</div>';
     return;
   }
-  const allEx = BLOCKS.flatMap(b => b.ex);
+  const allEx = BLOCKS.reduce(function(a,b){return a.concat(b.ex);},[]) ;
   [...history].reverse().forEach(s => {
     const d = new Date(s.date);
     const dStr = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
@@ -550,7 +555,7 @@ function renderHistory() {
 function renderStats() {
   const wrap = document.getElementById('tab-stats');
   wrap.innerHTML = '';
-  const allEx = BLOCKS.flatMap(b => b.ex);
+  const allEx = BLOCKS.reduce(function(a,b){return a.concat(b.ex);},[]) ;
   const nS = history.length;
   const nSets = history.reduce((a,s) => a + Object.values(s.exercises||{}).reduce((x,sets) => x+(Array.isArray(sets)?sets.filter(s=>s.done).length:0), 0), 0);
   const nVol = Math.round(history.reduce((a,s) => a + Object.values(s.exercises||{}).reduce((acc,sets) => {
@@ -618,7 +623,7 @@ function renderStats() {
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 function exportExcel() {
   if (!history.length) { showToast('Aucune donnée à exporter'); return; }
-  const allEx = BLOCKS.flatMap(b => b.ex);
+  const allEx = BLOCKS.reduce(function(a,b){return a.concat(b.ex);},[]) ;
 
   // Feuille 1 : toutes les séries
   const r1 = [['Date','Heure','Durée','Exercice','Série n°','Répétitions','Charge (kg)','Volume (kg)','Complétée','Ressenti','Note']];
@@ -715,7 +720,7 @@ if ('serviceWorker' in navigator) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 if (sessionStart) { startTimer(); document.getElementById('session-timer').textContent = 'Séance en cours...'; }
-renderSession();
+try { renderSession(); } catch(e) { console.error('renderSession error:', e); document.getElementById('tab-session').innerHTML = '<div style="padding:20px;color:red;font-size:13px">Erreur: '+e.message+'</div>'; }
 </script>
 </body>
 </html>
